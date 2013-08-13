@@ -3,18 +3,27 @@
 require 'rubygems'
 require 'nokogiri'
 require 'reverse_markdown'
+require 'fileutils'
 require 'date'
+require 'erb'
 
 path = ARGV[0]
 abort 'Usage: ./transblogrify {root_path}' if path.nil?
+
+class Post
+  attr_accessor :shortcut, :date, :title, :body
+
+  def get_binding
+    binding()
+  end
+end
 
 def read_dir(dir)
   Dir.glob("#{dir}/*").each do |f|
     if File.file?(f)
       m = /musings\/\d+\/\d+\/(.+)\.html/.match(f)
       if m and m[1].match(/index|cid/).nil?
-        puts f
-        @entries[f] = process(m[0], f)
+        @entries << process(m[1], f)
       end 
     elsif File.directory?(f)
       read_dir(f)
@@ -25,14 +34,25 @@ end
 def process(shortcut, path)
   src = Nokogiri::HTML(open(path))
   entry = src.css('#beta-inner')
-  { 
-    :shortcut => shortcut,
-    :date => Date.parse(entry.css('.date-header').text), 
-    :title => entry.css('.entry-header').text,
-    :body =>  ReverseMarkdown.parse(entry.css('.entry-content').first)
-  }
+
+  p = Post.new
+  p.shortcut = shortcut
+  p.date = Date.parse(entry.css('.date-header').text)
+  p.title = entry.css('.entry-header').text
+  p.body = ReverseMarkdown.parse(entry.css('.entry-content').first).strip!
+  p 
 end
 
-@entries = {}
+@entries = []
 read_dir path
-puts @entries.count
+
+FileUtils.rm_rf(Dir.glob('_posts/*'))
+
+@entries.each do |e|
+  erb = ERB.new(File.read('post.markdown.erb'))
+  File.open("_posts/#{e.date.strftime}-#{e.shortcut}.markdown", 'wb') do |f|
+    f.write(erb.result(e.get_binding))
+  end
+end
+
+puts "#{@entries.count} posts processed."
