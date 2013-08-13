@@ -46,7 +46,7 @@ end
 @entries = []
 read_dir path
 
-FileUtils.rm_rf(Dir.glob('_posts/*'))
+FileUtils.rm_rf(Dir.glob('_posts/*.markdown'))
 
 @entries.each do |e|
   erb = ERB.new(File.read('post.markdown.erb'))
