@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'nokogiri'
+require 'reverse_markdown'
+require 'date'
+
+def read_dir(dir)
+  Dir.glob("#{dir}/*").each do |f|
+    if File.file?(f)
+      m = /musings\/\d+\/\d+\/(.+)\.html/.match(f)
+      puts m[1] if m and m[1].match(/index|cid/).nil?
+
+      if m and m[0].match(/index/).nil? and m[0].match(/-cid/).nil?
+        @entries[f] = process(m[0], f)
+      end
+    elsif File.directory?(f)
+      read_dir(f)
+    end
+  end
+end
+
+def process(shortcut, path)
+  src = Nokogiri::HTML(open(path))
+  entry = src.css('#beta-inner')
+  { 
+    :shortcut => shortcut,
+    :date => Date.parse(entry.css('.date-header').text), 
+    :title => entry.css('.entry-header').text,
+    :body =>  ReverseMarkdown.parse(entry.css('.entry-content').first)
+  }
+end
+
+@entries = {}
+read_dir ARGV[0]
+puts @entries.count
