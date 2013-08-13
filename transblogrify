@@ -5,15 +5,17 @@ require 'nokogiri'
 require 'reverse_markdown'
 require 'date'
 
+path = ARGV[0]
+abort 'Usage: ./transblogrify {root_path}' if path.nil?
+
 def read_dir(dir)
   Dir.glob("#{dir}/*").each do |f|
     if File.file?(f)
       m = /musings\/\d+\/\d+\/(.+)\.html/.match(f)
-      puts m[1] if m and m[1].match(/index|cid/).nil?
-
-      if m and m[0].match(/index/).nil? and m[0].match(/-cid/).nil?
+      if m and m[1].match(/index|cid/).nil?
+        puts f
         @entries[f] = process(m[0], f)
-      end
+      end 
     elsif File.directory?(f)
       read_dir(f)
     end
@@ -32,5 +34,5 @@ def process(shortcut, path)
 end
 
 @entries = {}
-read_dir ARGV[0]
+read_dir path
 puts @entries.count
